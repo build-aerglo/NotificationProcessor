@@ -2,20 +2,21 @@ using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using MimeKit;
-using NotificationProcessor.Models;
+using NotificationProcessor.Domain.Entities;
+using NotificationProcessor.Domain.Interfaces;
 
-namespace NotificationProcessor.Handlers;
+namespace NotificationProcessor.Infrastructure.Providers;
 
-public class EmailHandler : IEmailHandler
+public class SmtpEmailProvider : IEmailProvider
 {
-    private readonly ILogger<EmailHandler> _logger;
+    private readonly ILogger<SmtpEmailProvider> _logger;
 
-    public EmailHandler(ILogger<EmailHandler> logger)
+    public SmtpEmailProvider(ILogger<SmtpEmailProvider> logger)
     {
         _logger = logger;
     }
 
-    public async Task<bool> SendEmailAsync(EmailNotificationData emailData)
+    public async Task<bool> SendEmailAsync(EmailNotification emailNotification)
     {
         try
         {
@@ -33,27 +34,27 @@ public class EmailHandler : IEmailHandler
                 return false;
             }
 
-            if (string.IsNullOrEmpty(emailData.To))
+            if (!emailNotification.IsValid())
             {
-                _logger.LogError("Missing 'To' field in email notification data");
+                _logger.LogError("Invalid email notification data");
                 return false;
             }
 
             // Create email message
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress("Notification System", fromEmail));
-            message.To.Add(new MailboxAddress("", emailData.To));
-            message.Subject = emailData.Subject;
+            message.To.Add(new MailboxAddress("", emailNotification.To));
+            message.Subject = emailNotification.Subject;
 
             // Build message body
             var builder = new BodyBuilder
             {
-                TextBody = emailData.Body
+                TextBody = emailNotification.Body
             };
 
-            if (!string.IsNullOrEmpty(emailData.Html))
+            if (!string.IsNullOrEmpty(emailNotification.Html))
             {
-                builder.HtmlBody = emailData.Html;
+                builder.HtmlBody = emailNotification.Html;
             }
 
             message.Body = builder.ToMessageBody();
@@ -65,7 +66,7 @@ public class EmailHandler : IEmailHandler
             await client.SendAsync(message);
             await client.DisconnectAsync(true);
 
-            _logger.LogInformation("Email sent successfully to {To}", emailData.To);
+            _logger.LogInformation("Email sent successfully to {To}", emailNotification.To);
             return true;
         }
         catch (Exception ex)

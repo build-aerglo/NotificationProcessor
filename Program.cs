@@ -1,13 +1,20 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using NotificationProcessor.Handlers;
+using NotificationProcessor.Application.Interfaces;
+using NotificationProcessor.Application.Services;
+using NotificationProcessor.Domain.Interfaces;
+using NotificationProcessor.Infrastructure.Providers;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
     .ConfigureServices(services =>
     {
-        services.AddScoped<IEmailHandler, EmailHandler>();
-        services.AddScoped<ISmsHandler, SmsHandler>();
+        // Application Services
+        services.AddScoped<INotificationService, NotificationService>();
+
+        // Infrastructure Providers
+        services.AddScoped<IEmailProvider, SmtpEmailProvider>();
+        services.AddScoped<ISmsProvider, TwilioSmsProvider>();
     })
     .Build();
 

@@ -1,21 +1,22 @@
 using Microsoft.Extensions.Logging;
-using NotificationProcessor.Models;
+using NotificationProcessor.Domain.Entities;
+using NotificationProcessor.Domain.Interfaces;
 using Twilio;
 using Twilio.Rest.Api.V2010.Account;
 using Twilio.Exceptions;
 
-namespace NotificationProcessor.Handlers;
+namespace NotificationProcessor.Infrastructure.Providers;
 
-public class SmsHandler : ISmsHandler
+public class TwilioSmsProvider : ISmsProvider
 {
-    private readonly ILogger<SmsHandler> _logger;
+    private readonly ILogger<TwilioSmsProvider> _logger;
 
-    public SmsHandler(ILogger<SmsHandler> logger)
+    public TwilioSmsProvider(ILogger<TwilioSmsProvider> logger)
     {
         _logger = logger;
     }
 
-    public async Task<bool> SendSmsAsync(SmsNotificationData smsData)
+    public async Task<bool> SendSmsAsync(SmsNotification smsNotification)
     {
         try
         {
@@ -31,15 +32,9 @@ public class SmsHandler : ISmsHandler
                 return false;
             }
 
-            if (string.IsNullOrEmpty(smsData.To))
+            if (!smsNotification.IsValid())
             {
-                _logger.LogError("Missing 'To' field in SMS notification data");
-                return false;
-            }
-
-            if (string.IsNullOrEmpty(smsData.Body))
-            {
-                _logger.LogError("Missing 'Body' field in SMS notification data");
+                _logger.LogError("Invalid SMS notification data");
                 return false;
             }
 
@@ -48,12 +43,12 @@ public class SmsHandler : ISmsHandler
 
             // Send SMS
             var message = await MessageResource.CreateAsync(
-                body: smsData.Body,
+                body: smsNotification.Body,
                 from: new Twilio.Types.PhoneNumber(fromPhone),
-                to: new Twilio.Types.PhoneNumber(smsData.To)
+                to: new Twilio.Types.PhoneNumber(smsNotification.To)
             );
 
-            _logger.LogInformation("SMS sent successfully to {To}, SID: {Sid}", smsData.To, message.Sid);
+            _logger.LogInformation("SMS sent successfully to {To}, SID: {Sid}", smsNotification.To, message.Sid);
             return true;
         }
         catch (ApiException ex)

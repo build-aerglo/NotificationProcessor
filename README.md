@@ -7,22 +7,51 @@
 - **Queue-based Processing**: Automatically processes messages from Azure Queue Storage (`notifications` queue)
 - **Email Notifications**: Sends emails using SMTP (MailKit) with support for both plain text and HTML content
 - **SMS Notifications**: Sends SMS messages using Twilio
+- **DDD Architecture**: Clean separation of concerns with Domain, Application, Infrastructure, and API layers
+- **Interface-based Design**: All services use interfaces for testability and flexibility
 - **Local Testing**: Supports local development and testing with Azurite
 - **Scalable**: Leverages Azure Functions for automatic scaling based on queue load
 - **Dependency Injection**: Uses .NET dependency injection for clean architecture
 
 ## Architecture
 
+This project follows **Domain-Driven Design (DDD)** principles:
+
 ```
 Azure Queue Storage (notifications)
          ↓
-Azure Functions Queue Trigger (.NET 6)
-         ↓
-    Notification Router
-         ↓
-    ├── Email Handler (MailKit/SMTP)
-    └── SMS Handler (Twilio)
+┌────────────────────────────────────────┐
+│      API Layer (Azure Functions)       │
+│   - NotificationQueueTrigger          │
+└────────────────┬───────────────────────┘
+                 ↓
+┌────────────────────────────────────────┐
+│     Application Layer (Services)       │
+│   - INotificationService              │
+│   - NotificationService               │
+└────────────────┬───────────────────────┘
+                 ↓
+┌────────────────────────────────────────┐
+│      Domain Layer (Entities)           │
+│   - NotificationMessage               │
+│   - EmailNotification                 │
+│   - SmsNotification                   │
+│   - IEmailProvider / ISmsProvider     │
+└────────────────┬───────────────────────┘
+                 ↓
+┌────────────────────────────────────────┐
+│  Infrastructure Layer (Providers)      │
+│   - SmtpEmailProvider (MailKit)       │
+│   - TwilioSmsProvider (Twilio)        │
+└────────────────────────────────────────┘
 ```
+
+**Benefits of this architecture**:
+- Clear separation of concerns
+- Easy to test (mock interfaces)
+- Flexible (swap implementations without changing business logic)
+- Maintainable (each layer has a single responsibility)
+- Extensible (add new notification types without major changes)
 
 ## Prerequisites
 
@@ -324,32 +353,60 @@ func start --dotnet-isolated-debug
 
 See `.github/workflows/deploy.yml` for CI/CD pipeline example.
 
-## Project Structure
+## Project Structure (DDD Architecture)
+
+The project follows Domain-Driven Design (DDD) principles with clear separation of concerns:
 
 ```
 NotificationProcessor/
-├── Functions/
-│   └── NotificationQueueTrigger.cs  # Queue trigger function
-├── Handlers/
-│   ├── IEmailHandler.cs             # Email handler interface
-│   ├── EmailHandler.cs              # SMTP email implementation
-│   ├── ISmsHandler.cs               # SMS handler interface
-│   └── SmsHandler.cs                # Twilio SMS implementation
-├── Models/
-│   └── NotificationMessage.cs       # Data models
+├── API/                                    # API Layer (Azure Functions endpoints)
+│   └── Functions/
+│       └── NotificationQueueTrigger.cs    # Queue trigger function
+│
+├── Application/                           # Application Layer (Business logic & services)
+│   ├── Interfaces/
+│   │   └── INotificationService.cs       # Notification service interface
+│   └── Services/
+│       └── NotificationService.cs        # Notification service implementation
+│
+├── Domain/                                # Domain Layer (Core business entities & rules)
+│   ├── Entities/
+│   │   ├── NotificationMessage.cs        # Base notification entity
+│   │   ├── EmailNotification.cs          # Email notification entity
+│   │   └── SmsNotification.cs            # SMS notification entity
+│   └── Interfaces/
+│       ├── IEmailProvider.cs             # Email provider interface
+│       └── ISmsProvider.cs               # SMS provider interface
+│
+├── Infrastructure/                        # Infrastructure Layer (External services & DB)
+│   └── Providers/
+│       ├── SmtpEmailProvider.cs          # SMTP email implementation
+│       └── TwilioSmsProvider.cs          # Twilio SMS implementation
+│
 ├── TestMessages/
-│   ├── email-test.json              # Email test message
-│   └── sms-test.json                # SMS test message
-├── Program.cs                       # Host configuration
-├── host.json                        # Azure Functions host config
-├── local.settings.json              # Local configuration (not in git)
-├── NotificationProcessor.csproj     # Project file
-├── .env.example                     # Environment variable template
-├── .gitignore                       # Git ignore rules
-├── test-queue.sh                    # Bash test script
-├── test-queue.ps1                   # PowerShell test script
-└── README.md                        # This file
+│   ├── email-test.json                   # Email test message template
+│   └── sms-test.json                     # SMS test message template
+│
+├── Program.cs                            # Dependency injection configuration
+├── host.json                             # Azure Functions host config
+├── local.settings.json                   # Local configuration (not in git)
+├── NotificationProcessor.csproj          # Project file
+├── .env.example                          # Environment variable template
+├── .gitignore                            # Git ignore rules
+├── test-queue.sh                         # Bash test script
+├── test-queue.ps1                        # PowerShell test script
+└── README.md                             # This file
 ```
+
+### Layer Responsibilities
+
+**API Layer**: Handles incoming requests (queue triggers, HTTP endpoints). Thin layer that delegates to Application services.
+
+**Application Layer**: Contains business logic and orchestration. Coordinates between domain entities and infrastructure.
+
+**Domain Layer**: Core business entities, value objects, and domain interfaces. Framework-agnostic and contains no external dependencies.
+
+**Infrastructure Layer**: Implements domain interfaces with concrete external services (SMTP, Twilio, databases, etc.).
 
 ## NuGet Packages Used
 
