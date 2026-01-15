@@ -1,0 +1,7 @@
+{
+  "type": "sms",
+  "data": {
+    "to": "+1234567890",
+    "body": "This is a test SMS notification from the NotificationProcessor."
+  }
+}

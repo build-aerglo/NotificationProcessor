@@ -1,0 +1,9 @@
+{
+  "type": "email",
+  "data": {
+    "to": "recipient@example.com",
+    "subject": "Test Notification",
+    "body": "This is a test email notification from the NotificationProcessor.",
+    "html": "<html><body><h1>Test Notification</h1><p>This is a test email notification from the NotificationProcessor.</p></body></html>"
+  }
+}
