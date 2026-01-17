@@ -49,6 +49,22 @@ NotificationProcessor/
 - **RESTful API**: HTTP-triggered Azure Functions with clean endpoints
 - **Dependency Injection**: Proper DI setup following Azure Functions best practices
 - **Unit Tests**: Comprehensive NUnit test coverage
+- **Security Updates**: All packages updated to address CVE-2024-43485 and other vulnerabilities
+
+## Important: Service Responsibility
+
+**This service ONLY provides credentials** - it does NOT handle:
+- Template loading or HTML generation
+- Message formatting
+- Actual email/SMS sending
+
+**Your Notification API should**:
+- Receive notification requests with template data
+- Load and merge HTML/text templates with data
+- Call this service to get SMTP/Twilio credentials
+- Send emails/SMS using those credentials
+
+See [INTEGRATION.md](./INTEGRATION.md) for detailed integration patterns and examples.
 
 ## API Endpoints
 
@@ -168,6 +184,20 @@ Set the following Application Settings in Azure Portal:
 - .NET 8.0 SDK
 - Azure Functions Core Tools (for local development)
 - Azure Storage Emulator or Azure Storage Account
+
+### Package Versions
+
+All packages have been updated to latest stable versions to address security vulnerabilities:
+
+**Azure Functions**:
+- Microsoft.Azure.Functions.Worker 1.23.0
+- Microsoft.Azure.Functions.Worker.Extensions.Http 3.2.0
+- Microsoft.Azure.Functions.Worker.Sdk 1.17.4
+
+**Security Fixes**:
+- System.Text.Json 8.0.5 (fixes CVE-2024-43485)
+- coverlet.collector 6.0.2 (fixes vulnerabilities reported by mend.io)
+- Azure.Storage.Queues 12.21.0 (latest stable)
 
 ### Build
 ```bash
