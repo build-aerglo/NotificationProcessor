@@ -217,12 +217,54 @@ dotnet test NotificationProcessor.sln
 
 ## Azure Queue Storage
 
-The application connects to Azure Queue Storage at:
+The application can integrate with Azure Queue Storage at:
 ```
 https://clereviewst.queue.core.windows.net/notifications
 ```
 
-Messages sent to the queue are in JSON format:
+### Queue Usage Patterns
+
+The queue can be used in different ways depending on your architecture:
+
+**Pattern 1: Queue for Notification Requests (RECOMMENDED)**
+- External systems send notification requests to the queue
+- Your Notification API consumes messages from queue
+- Notification API calls this service via HTTP to get credentials
+- Notification API sends emails/SMS
+
+**Pattern 2: Queue for Credential Distribution (OPTIONAL)**
+- This service sends credentials to queue via `POST /api/config/queue`
+- Your Notification API caches credentials to reduce HTTP calls
+- ⚠️ Less secure (credentials in queue)
+
+**Pattern 3: Hybrid (BEST PRACTICE)**
+- Queue holds notification requests
+- Credentials fetched via HTTP and cached in memory
+- Best balance of security, performance, and reliability
+
+See [QUEUE_PATTERNS.md](./QUEUE_PATTERNS.md) for detailed explanation of all patterns with code examples.
+
+### Recommended Queue Message Format
+
+For Pattern 1 & 3 (notification requests in queue):
+```json
+{
+  "notificationId": "uuid",
+  "type": "UserWelcome",
+  "channels": ["email", "sms"],
+  "recipient": {
+    "email": "user@example.com",
+    "phone": "+123456789"
+  },
+  "payload": {
+    "firstName": "John",
+    "otp": "456789"
+  },
+  "requestedAt": "2026-01-14T12:00:00Z"
+}
+```
+
+For Pattern 2 (credentials in queue - only if using POST /api/config/queue):
 ```json
 {
   "requestId": "guid",
@@ -233,7 +275,7 @@ Messages sent to the queue are in JSON format:
     ...
   },
   "success": true,
-  "timestamp": "2024-01-17T12:00:00Z"
+  "timestamp": "2026-01-17T12:00:00Z"
 }
 ```
 
