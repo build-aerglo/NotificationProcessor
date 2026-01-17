@@ -1,0 +1,19 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "<YOUR_AZURE_STORAGE_CONNECTION_STRING>",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "Smtp__Host": "smtp.example.com",
+    "Smtp__Port": "587",
+    "Smtp__Username": "",
+    "Smtp__Password": "",
+    "Smtp__FromEmail": "noreply@example.com",
+    "Smtp__FromName": "Notification System",
+    "Smtp__EnableSsl": "true",
+    "Twilio__AccountSid": "",
+    "Twilio__AuthToken": "",
+    "Twilio__FromPhoneNumber": "",
+    "AzureQueueStorage__ConnectionString": "<YOUR_AZURE_STORAGE_CONNECTION_STRING>",
+    "AzureQueueStorage__QueueName": "notifications"
+  }
+}
