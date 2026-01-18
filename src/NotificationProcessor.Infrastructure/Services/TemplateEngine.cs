@@ -70,14 +70,7 @@ public class TemplateEngine : ITemplateEngine
 
         try
         {
-            var channelPath = Path.Combine(_templateBasePath, channel.ToLowerInvariant());
-
-            if (!Directory.Exists(channelPath))
-            {
-                throw new DirectoryNotFoundException($"Channel directory not found: {channelPath}");
-            }
-
-            // Determine file extension based on channel
+            // Validate channel is supported first (before any file system operations)
             var extension = channel.ToLowerInvariant() switch
             {
                 "email" => ".html",
@@ -85,6 +78,13 @@ public class TemplateEngine : ITemplateEngine
                 "inapp" => ".txt",
                 _ => throw new ArgumentException($"Unsupported channel: {channel}", nameof(channel))
             };
+
+            var channelPath = Path.Combine(_templateBasePath, channel.ToLowerInvariant());
+
+            if (!Directory.Exists(channelPath))
+            {
+                throw new DirectoryNotFoundException($"Channel directory not found: {channelPath}");
+            }
 
             var templatePath = Path.Combine(channelPath, $"{templateName}{extension}");
 
