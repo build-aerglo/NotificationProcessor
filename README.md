@@ -81,14 +81,13 @@ Send messages to the Azure Queue in this format:
 ```json
 {
   "id": "uuid",
-  "template": "UserWelcome",
+  "template": "forget-password",
   "channel": "email",
   "retryCount": 0,
   "recipient": "user@example.com",
   "payload": {
     "firstName": "John",
-    "otp": "123456",
-    "subject": "Welcome!"
+    "otp": "456789"
   },
   "requestedAt": "2026-01-14T12:00:00Z"
 }
@@ -96,36 +95,86 @@ Send messages to the Azure Queue in this format:
 
 **Fields:**
 - `id`: Notification ID (matches database record)
-- `template`: Template name (e.g., "UserWelcome", "PasswordReset")
+- `template`: Template name (e.g., "forget-password", "user-welcome")
 - `channel`: "email", "sms", or "inapp"
 - `retryCount`: Current retry count (start at 0)
-- `recipient`: Email address or phone number
+- `recipient`: Email address (for email) or phone number (for SMS)
 - `payload`: Dynamic data for template rendering
 - `requestedAt`: Timestamp of request
 
+### Template Matching
+
+The template engine automatically selects the correct file based on the channel:
+
+- **Email channel** → Loads `{template}.html` from `Templates/email/`
+- **SMS channel** → Loads `{template}.txt` from `Templates/sms/`
+- **InApp channel** → Loads `{template}.txt` from `Templates/inapp/`
+
+**Example:**
+```json
+{
+  "template": "forget-password",
+  "channel": "email"
+}
+```
+→ Loads `Templates/email/forget-password.html`
+
+```json
+{
+  "template": "forget-password",
+  "channel": "sms"
+}
+```
+→ Loads `Templates/sms/forget-password.txt`
+
 ## Templates
 
-Templates use `{{placeholder}}` syntax:
+Templates use `{{placeholder}}` syntax for dynamic content replacement.
 
-**Email Template (UserWelcome.html):**
+### Template File Structure
+
+Templates must be organized by channel with the correct file extension:
+
+```
+Templates/
+├── email/
+│   ├── forget-password.html
+│   ├── user-welcome.html
+│   └── order-confirmation.html
+├── sms/
+│   ├── forget-password.txt
+│   ├── user-welcome.txt
+│   └── order-confirmation.txt
+└── inapp/
+    └── notification.txt
+```
+
+### Example Templates
+
+**Email Template (forget-password.html):**
 ```html
 <!DOCTYPE html>
 <html>
 <body>
-    <h1>Welcome {{firstName}}!</h1>
-    <p>Your verification code: <strong>{{otp}}</strong></p>
+    <h1>Password Recovery</h1>
+    <p>Hi {{firstName}},</p>
+    <p>Your password reset code is: <strong>{{otp}}</strong></p>
+    <p>This code expires in 10 minutes.</p>
 </body>
 </html>
 ```
 
-**SMS Template (UserWelcome.txt):**
+**SMS Template (forget-password.txt):**
 ```
-Welcome {{firstName}}! Your verification code is: {{otp}}. Valid for 10 minutes.
+Hi {{firstName}}, your password reset code is {{otp}}. It expires in 10 minutes. If you didn't request this, ignore this message.
 ```
 
-Templates are organized by channel:
-- Email: `Templates/email/TemplateName.html`
-- SMS: `Templates/sms/TemplateName.txt`
+### Naming Conventions
+
+- Use **kebab-case** for template names (e.g., `forget-password`, `user-welcome`)
+- Email templates: **`.html`** extension
+- SMS templates: **`.txt`** extension
+- Template name in the queue message must match the filename (without extension)
 
 ## Configuration
 
