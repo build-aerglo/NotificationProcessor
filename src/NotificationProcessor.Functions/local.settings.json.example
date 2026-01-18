@@ -14,6 +14,7 @@
     "Twilio__AuthToken": "",
     "Twilio__FromPhoneNumber": "",
     "AzureQueueStorage__ConnectionString": "<YOUR_AZURE_STORAGE_CONNECTION_STRING>",
-    "AzureQueueStorage__QueueName": "notifications"
+    "AzureQueueStorage__QueueName": "notifications",
+    "Database__ConnectionString": "Host=localhost;Database=notifications;Username=postgres;Password=postgres"
   }
 }
