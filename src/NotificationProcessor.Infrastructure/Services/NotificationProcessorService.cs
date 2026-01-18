@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using NotificationProcessor.Core.Interfaces;
 using NotificationProcessor.Core.Models;
@@ -35,9 +36,11 @@ public class NotificationProcessorService : INotificationProcessor
             return false;
         }
 
+        var notificationContext = GetNotificationContext(notification);
+
         _logger.LogInformation(
-            "Processing notification {NotificationId} - Template: {Template}, Channel: {Channel}, Retry: {RetryCount}",
-            notification.Id, notification.Template, notification.Channel, notification.RetryCount);
+            "Processing notification {NotificationId} - Template: {Template}, Channel: {Channel}, Retry: {RetryCount}, Context: {Context}",
+            notification.Id, notification.Template, notification.Channel, notification.RetryCount, notificationContext);
 
         try
         {
@@ -61,8 +64,8 @@ public class NotificationProcessorService : INotificationProcessor
             catch (FileNotFoundException ex)
             {
                 _logger.LogError(ex,
-                    "Template {Template} not found for channel {Channel}. Notification {NotificationId} will be marked as failed.",
-                    notification.Template, notification.Channel, notification.Id);
+                    "Template {Template} not found for channel {Channel}. Notification {NotificationId} will be marked as failed. Context: {Context}",
+                    notification.Template, notification.Channel, notification.Id, notificationContext);
 
                 await _notificationRepository.MarkAsFailedAsync(notification.Id, notification.RetryCount);
                 return false;
@@ -70,8 +73,17 @@ public class NotificationProcessorService : INotificationProcessor
             catch (DirectoryNotFoundException ex)
             {
                 _logger.LogError(ex,
-                    "Channel directory {Channel} not found. Notification {NotificationId} will be marked as failed.",
-                    notification.Channel, notification.Id);
+                    "Channel directory {Channel} not found. Notification {NotificationId} will be marked as failed. Context: {Context}",
+                    notification.Channel, notification.Id, notificationContext);
+
+                await _notificationRepository.MarkAsFailedAsync(notification.Id, notification.RetryCount);
+                return false;
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogError(ex,
+                    "Invalid argument for notification {NotificationId}. Template: {Template}, Channel: {Channel}. Context: {Context}",
+                    notification.Id, notification.Template, notification.Channel, notificationContext);
 
                 await _notificationRepository.MarkAsFailedAsync(notification.Id, notification.RetryCount);
                 return false;
@@ -100,8 +112,8 @@ public class NotificationProcessorService : INotificationProcessor
 
                 default:
                     _logger.LogError(
-                        "Unknown channel {Channel} for notification {NotificationId}",
-                        notification.Channel, notification.Id);
+                        "Unknown channel {Channel} for notification {NotificationId}. Context: {Context}",
+                        notification.Channel, notification.Id, notificationContext);
                     await _notificationRepository.MarkAsFailedAsync(notification.Id, notification.RetryCount);
                     return false;
             }
@@ -128,7 +140,12 @@ public class NotificationProcessorService : INotificationProcessor
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error processing notification {NotificationId}", notification.Id);
+            _logger.LogError(ex,
+                "Unexpected error processing notification {NotificationId}. " +
+                "Template: {Template}, Channel: {Channel}, RetryCount: {RetryCount}, " +
+                "Exception Type: {ExceptionType}, Context: {Context}",
+                notification.Id, notification.Template, notification.Channel, notification.RetryCount,
+                ex.GetType().Name, notificationContext);
 
             // Increment retry count
             var newRetryCount = notification.RetryCount + 1;
@@ -151,5 +168,28 @@ public class NotificationProcessorService : INotificationProcessor
     private async Task<bool> SendSmsNotificationAsync(NotificationMessage notification, string messageContent)
     {
         return await _smsSender.SendSmsAsync(notification.Recipient, messageContent);
+    }
+
+    private string GetNotificationContext(NotificationMessage notification)
+    {
+        try
+        {
+            return JsonSerializer.Serialize(new
+            {
+                notification.Id,
+                notification.Template,
+                notification.Channel,
+                notification.Recipient,
+                notification.RetryCount,
+                notification.RequestedAt,
+                PayloadKeys = notification.Payload?.Keys.ToList() ?? new List<string>(),
+                Payload = notification.Payload
+            }, new JsonSerializerOptions { WriteIndented = false });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to serialize notification context for {NotificationId}", notification.Id);
+            return $"{{\"Id\":\"{notification.Id}\",\"SerializationError\":\"{ex.Message}\"}}";
+        }
     }
 }
