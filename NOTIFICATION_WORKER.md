@@ -151,42 +151,57 @@ WHERE id = @notificationId;
 
 ## Configuration
 
-### Required Settings
+### Local Development (local.settings.json)
+
+For local development, configure settings in `local.settings.json`:
 
 ```json
 {
-  "Smtp": {
-    "Host": "smtp.example.com",
-    "Port": 587,
-    "Username": "your-smtp-username",
-    "Password": "your-smtp-password",
-    "FromEmail": "noreply@example.com",
-    "FromName": "Your Company",
-    "EnableSsl": true
-  },
-  "Twilio": {
-    "AccountSid": "your-twilio-account-sid",
-    "AuthToken": "your-twilio-auth-token",
-    "FromPhoneNumber": "+1234567890"
-  },
-  "AzureQueueStorage": {
-    "ConnectionString": "DefaultEndpointsProtocol=https;...",
-    "QueueName": "notifications"
-  },
-  "Database": {
-    "ConnectionString": "Host=localhost;Database=notifications;Username=postgres;Password=postgres"
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+
+    "Smtp__Host": "smtp.example.com",
+    "Smtp__Port": "587",
+    "Smtp__Username": "your-smtp-username",
+    "Smtp__Password": "your-smtp-password",
+    "Smtp__FromEmail": "noreply@example.com",
+    "Smtp__FromName": "Your Company",
+    "Smtp__EnableSsl": "true",
+
+    "Twilio__AccountSid": "your-twilio-account-sid",
+    "Twilio__AuthToken": "your-twilio-auth-token",
+    "Twilio__FromPhoneNumber": "+1234567890",
+
+    "AzureQueueStorage__ConnectionString": "UseDevelopmentStorage=true",
+    "AzureQueueStorage__QueueName": "notifications",
+
+    "Database__ConnectionString": "Host=localhost;Database=notifications;Username=postgres;Password=postgres"
   }
 }
 ```
 
-### Environment Variables (Azure)
+**Note:** `local.settings.json` is automatically excluded from git and should never be committed.
 
-Use double-underscore notation:
-- `Smtp__Host`
-- `Smtp__Password`
-- `Twilio__AccountSid`
-- `AzureQueueStorage__ConnectionString`
-- `Database__ConnectionString`
+### Production (Azure Application Settings + Key Vault)
+
+In production, configure settings in Azure Portal under **Function App → Configuration → Application Settings**.
+
+**Recommended approach using Key Vault:**
+
+1. Store secrets in Azure Key Vault
+2. Enable Managed Identity on the Function App
+3. Grant Key Vault access to the Function App
+4. Reference secrets using Key Vault syntax:
+
+```
+Smtp__Password=@Microsoft.KeyVault(SecretUri=https://your-kv.vault.azure.net/secrets/SmtpPassword/)
+Twilio__AuthToken=@Microsoft.KeyVault(SecretUri=https://your-kv.vault.azure.net/secrets/TwilioAuthToken/)
+Database__ConnectionString=@Microsoft.KeyVault(SecretUri=https://your-kv.vault.azure.net/secrets/DbConnectionString/)
+```
+
+See [CONFIGURATION.md](CONFIGURATION.md) for detailed production setup instructions.
 
 ## Testing
 
@@ -213,8 +228,8 @@ Test coverage includes:
 To test the full flow:
 
 1. Ensure PostgreSQL is running with notifications table
-2. Ensure Azure Storage Emulator is running (or use real Azure Storage)
-3. Configure `appsettings.json` with valid credentials
+2. Ensure Azurite (Azure Storage Emulator) is running: `azurite-queue`
+3. Configure `local.settings.json` with valid credentials
 4. Run the Functions project:
    ```bash
    cd src/NotificationProcessor.Functions
