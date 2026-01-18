@@ -1,1 +1,0 @@
-Welcome {{firstName}}! Your verification code is: {{otp}}. This code is valid for 10 minutes. Do not share it with anyone.

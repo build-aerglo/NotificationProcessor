@@ -2,6 +2,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using NotificationProcessor.Core.Interfaces;
 using NotificationProcessor.Core.Models;
 using NotificationProcessor.Infrastructure.Services;
