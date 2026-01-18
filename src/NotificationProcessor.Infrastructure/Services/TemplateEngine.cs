@@ -77,22 +77,20 @@ public class TemplateEngine : ITemplateEngine
                 throw new DirectoryNotFoundException($"Channel directory not found: {channelPath}");
             }
 
-            // Support both .html and .txt extensions
-            var htmlPath = Path.Combine(channelPath, $"{templateName}.html");
-            var txtPath = Path.Combine(channelPath, $"{templateName}.txt");
+            // Determine file extension based on channel
+            var extension = channel.ToLowerInvariant() switch
+            {
+                "email" => ".html",
+                "sms" => ".txt",
+                "inapp" => ".txt",
+                _ => throw new ArgumentException($"Unsupported channel: {channel}", nameof(channel))
+            };
 
-            string templatePath;
-            if (File.Exists(htmlPath))
+            var templatePath = Path.Combine(channelPath, $"{templateName}{extension}");
+
+            if (!File.Exists(templatePath))
             {
-                templatePath = htmlPath;
-            }
-            else if (File.Exists(txtPath))
-            {
-                templatePath = txtPath;
-            }
-            else
-            {
-                throw new FileNotFoundException($"Template not found: {templateName} in channel: {channel}");
+                throw new FileNotFoundException($"Template file not found: {templateName}{extension} in {channelPath}");
             }
 
             _logger.LogInformation("Loading template from: {TemplatePath}", templatePath);
