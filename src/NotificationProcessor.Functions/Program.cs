@@ -1,19 +1,18 @@
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using NotificationProcessor.Core.Interfaces;
 using NotificationProcessor.Infrastructure.Services;
 
 var host = new HostBuilder()
-    .ConfigureFunctionsWebApplication()
+    .ConfigureFunctionsWorkerDefaults()
     .ConfigureServices(services =>
     {
         services.AddApplicationInsightsTelemetryWorkerService();
         services.ConfigureFunctionsApplicationInsights();
+        services.AddSingleton<INotificationConfigService, NotificationConfigService>();
+        services.AddSingleton<IQueueService, QueueService>();
 
-        // Register services
-        services.AddScoped<INotificationConfigService, NotificationConfigService>();
-        services.AddScoped<IQueueService, QueueService>();
     })
     .Build();
 
