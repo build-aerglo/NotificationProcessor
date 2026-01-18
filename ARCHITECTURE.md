@@ -2,72 +2,158 @@
 
 ## Overview
 
-The NotificationProcessor application follows Clean Architecture principles to ensure separation of concerns, testability, and maintainability.
+The NotificationProcessor is an Azure Functions application that processes notification messages from Azure Queue Storage. It follows Clean Architecture principles to ensure separation of concerns, testability, and maintainability.
+
+## Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Azure Queue Storage                     │
+│                    (Notification Messages)                   │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ↓ Queue Trigger
+┌─────────────────────────────────────────────────────────────┐
+│           NotificationQueueWorkerFunction                    │
+│                  (Azure Functions)                           │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│           NotificationProcessorService                       │
+│              (Orchestrates Processing)                       │
+└─────┬──────────────┬──────────────┬──────────────┬─────────┘
+      │              │              │              │
+      ↓              ↓              ↓              ↓
+┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐
+│Template  │  │  Email   │  │   SMS    │  │ Notification │
+│ Engine   │  │  Sender  │  │  Sender  │  │  Repository  │
+└──────────┘  └──────────┘  └──────────┘  └──────────────┘
+      │              │              │              │
+      ↓              ↓              ↓              ↓
+┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐
+│Templates │  │   SMTP   │  │  Twilio  │  │  PostgreSQL  │
+│  Files   │  │  Server  │  │   API    │  │   Database   │
+└──────────┘  └──────────┘  └──────────┘  └──────────────┘
+```
 
 ## Layers
 
 ### 1. Core Layer (`NotificationProcessor.Core`)
 
-**Purpose**: Contains business logic, domain models, and interfaces.
+**Purpose**: Contains business logic, domain models, and service interfaces.
 
-**Dependencies**: None (this layer is independent)
+**Dependencies**: None (this layer is completely independent)
 
 **Contents**:
-- **Models**: DTOs and domain objects
-  - `SmtpConfiguration`: Email service credentials
-  - `TwilioConfiguration`: SMS service credentials
-  - `NotificationConfigRequest`: Request model
-  - `NotificationConfigResponse`: Response model
 
-- **Interfaces**: Service contracts
-  - `INotificationConfigService`: Configuration retrieval
-  - `IQueueService`: Queue operations
+**Models**:
+- `NotificationMessage`: Queue message structure
+- `NotificationChannel`: Channel constants (email, sms, inapp)
+- `NotificationStatus`: Status constants (pending, sent, delivered, failed)
+- `SmtpConfiguration`: Email service credentials
+- `TwilioConfiguration`: SMS service credentials
+
+**Interfaces**:
+- `INotificationProcessor`: Main processing orchestrator
+- `ITemplateEngine`: Template loading and rendering
+- `IEmailSender`: Email sending abstraction
+- `ISmsSender`: SMS sending abstraction
+- `INotificationRepository`: Database operations
 
 **Design Principles**:
-- No external dependencies
-- Pure domain logic
-- Interface-based contracts
+- No external dependencies (pure .NET)
+- Interface-based contracts for all services
+- Immutable domain models
+- Single Responsibility Principle
 
 ### 2. Infrastructure Layer (`NotificationProcessor.Infrastructure`)
 
 **Purpose**: Implements infrastructure concerns and external integrations.
 
 **Dependencies**:
-- NotificationProcessor.Core
-- Azure.Storage.Queues
-- Microsoft.Extensions.Configuration
-- Microsoft.Extensions.Logging
+- NotificationProcessor.Core (interfaces)
+- Azure.Storage.Queues (queue operations)
+- Npgsql (PostgreSQL)
+- Twilio (SMS)
+- Microsoft.Extensions.* (configuration, logging)
 
-**Contents**:
-- **Services**:
-  - `NotificationConfigService`: Implements configuration retrieval from app settings
-  - `QueueService`: Implements Azure Queue Storage operations
+**Services**:
+
+**NotificationProcessorService**:
+- Orchestrates notification processing workflow
+- Handles retry logic
+- Updates database status
+- Error handling and logging
+
+**TemplateEngine**:
+- Loads templates from file system
+- Supports .html (email) and .txt (sms) files
+- Renders templates with `{{placeholder}}` replacement
+- Organizes templates by channel (email/, sms/)
+
+**EmailSender**:
+- Sends emails via SMTP
+- HTML support
+- Configurable sender name/email
+- SSL/TLS support
+
+**SmsSender**:
+- Sends SMS via Twilio API
+- Phone number validation
+- Delivery status tracking
+
+**NotificationRepository**:
+- PostgreSQL integration
+- Updates delivery status
+- Tracks retry counts
+- Records delivered timestamp
 
 **Design Principles**:
 - Implements Core interfaces
-- Handles external service integration
-- Manages configuration binding
+- Singleton service lifetime
+- Async/await throughout
+- Comprehensive error handling
+- Structured logging with ILogger
 
 ### 3. Functions Layer (`NotificationProcessor.Functions`)
 
-**Purpose**: Azure Functions HTTP endpoints and application entry point.
+**Purpose**: Azure Functions entry point and queue trigger.
 
 **Dependencies**:
 - NotificationProcessor.Core
 - NotificationProcessor.Infrastructure
-- Microsoft.Azure.Functions.Worker
+- Microsoft.Azure.Functions.Worker (isolated process)
+- Microsoft.Azure.Functions.Worker.Extensions.Storage.Queues
 
 **Contents**:
-- **Functions**:
-  - `GetSmtpConfigFunction`: GET /api/config/smtp
-  - `GetTwilioConfigFunction`: GET /api/config/twilio
-  - `SendConfigToQueueFunction`: POST /api/config/queue
-- **Program.cs**: Dependency injection configuration
+
+**Functions**:
+- `NotificationQueueWorkerFunction`: Queue-triggered background worker
+
+**Templates**:
+```
+Templates/
+├── email/
+│   ├── UserWelcome.html
+│   └── PasswordReset.html
+└── sms/
+    ├── UserWelcome.txt
+    └── PasswordReset.txt
+```
+
+**Program.cs**:
+- Dependency injection configuration
+- Service registration
+- Configuration binding (SMTP, Twilio, Database)
+- Template path setup
 
 **Design Principles**:
-- Thin controllers
-- Dependency injection
-- HTTP protocol handling only
+- Isolated process model (.NET 8)
+- Stateless function execution
+- Dependency injection for all services
+- Configuration via environment variables
+- Templates deployed with application
 
 ### 4. Tests Layer (`NotificationProcessor.Tests`)
 
@@ -75,101 +161,212 @@ The NotificationProcessor application follows Clean Architecture principles to e
 
 **Dependencies**:
 - All project layers
-- NUnit
-- Moq
+- NUnit (test framework)
+- Moq (mocking)
+- coverlet.collector (code coverage)
 
-**Contents**:
-- **Models**: Model validation tests
-- **Services**: Service behavior tests
+**Test Coverage**:
+
+**TemplateEngineTests**:
+- Placeholder rendering
+- Template loading (HTML/TXT)
+- Missing template handling
+- Empty template scenarios
+
+**NotificationProcessorServiceTests**:
+- Email notification processing
+- SMS notification processing
+- Retry logic
+- Max retries exceeded
+- Invalid channel handling
+- Template not found scenarios
+
+**NotificationMessageTests**:
+- Model serialization/deserialization
+- Default values
+- JSON compatibility
+
+**Design Principles**:
+- Arrange-Act-Assert pattern
+- Mock external dependencies
+- In-memory configuration
+- Isolated test execution
 
 ## Data Flow
 
-### GET Configuration Flow
+### Successful Notification Flow
 
 ```
-HTTP Request → Function → ConfigService → Configuration → Response
+1. Queue Message Received
+   ↓
+2. Deserialize to NotificationMessage
+   ↓
+3. Check retry count < max (5)
+   ↓
+4. Load template from Templates/{channel}/{template}.{ext}
+   ↓
+5. Render template with payload data
+   ↓
+6. Send via appropriate channel (SMTP/Twilio)
+   ↓
+7. Update database: status = 'delivered', delivered_at = NOW()
+   ↓
+8. Complete (message removed from queue)
 ```
 
-1. Client sends HTTP GET to `/api/config/smtp` or `/api/config/twilio`
-2. Azure Function receives request
-3. Function calls `INotificationConfigService`
-4. Service retrieves configuration from app settings
-5. Configuration returned as JSON
-
-### POST to Queue Flow
+### Failed Notification Flow
 
 ```
-HTTP Request → Function → ConfigService → QueueService → Azure Queue
+1. Queue Message Received
+   ↓
+2. Deserialize to NotificationMessage
+   ↓
+3. Check retry count < max (5)
+   ↓
+4. Attempt processing...
+   ↓
+5. Send fails (SMTP error, network issue, etc.)
+   ↓
+6. Increment retry_count in database
+   ↓
+7. Throw exception
+   ↓
+8. Azure Queue makes message invisible (visibility timeout)
+   ↓
+9. After timeout, message becomes visible again
+   ↓
+10. Repeat from step 1 (with incremented retry_count)
 ```
 
-1. Client sends HTTP POST to `/api/config/queue` with notification type
-2. Azure Function receives and validates request
-3. Function calls `INotificationConfigService.GetConfiguration()`
-4. Service retrieves appropriate configuration
-5. Function calls `IQueueService.SendConfigurationAsync()`
-6. QueueService serializes and sends to Azure Queue
-7. Success response returned
+### Max Retries Exceeded Flow
 
-## Dependency Injection
-
-```csharp
-services.AddScoped<INotificationConfigService, NotificationConfigService>();
-services.AddScoped<IQueueService, QueueService>();
+```
+1. Queue Message Received (retry_count = 5)
+   ↓
+2. Check retry count >= max
+   ↓
+3. Mark as failed in database
+   ↓
+4. Complete (message removed from queue)
+   ↓
+5. Message moved to poison queue (by Azure)
 ```
 
-**Scoped Lifetime**: New instance per HTTP request, ensuring proper isolation.
+## Configuration Architecture
 
-## Configuration Management
+### Local Development
+- **Source**: `local.settings.json`
+- **Pattern**: Flat key-value with double underscore hierarchy
+- **Secrets**: Plain text (never committed)
+- **Storage**: Azurite (local emulator)
 
-Configuration follows the ASP.NET Core configuration pattern:
+### Production (Azure)
+- **Source**: Application Settings
+- **Pattern**: Key Vault references for secrets
+- **Secrets**: Azure Key Vault with Managed Identity
+- **Storage**: Azure Queue Storage
 
-- Local development: `local.settings.json`
-- Azure deployment: Application Settings (environment variables)
-- Hierarchical binding using `IConfiguration.GetSection()`
+**Configuration Flow**:
+```
+IConfiguration (built by host)
+    ↓
+Environment variables (Azure App Settings)
+    ↓
+Key Vault resolution (if using @Microsoft.KeyVault syntax)
+    ↓
+Bound to typed configuration objects
+    ↓
+Injected into services
+```
+
+## Scalability & Performance
+
+### Horizontal Scaling
+- **Stateless design**: No in-memory state
+- **Singleton services**: Shared across function invocations
+- **Connection pooling**: SMTP and database connections reused
+- **Parallel processing**: Multiple queue messages processed concurrently
+
+### Retry Strategy
+- **Exponential backoff**: 1min → 5min → 15min → 30min → 60min
+- **Max retries**: 5 attempts
+- **Visibility timeout**: Azure Queue handles automatic retry
+- **Poison queue**: Failed messages after max retries
+
+### Monitoring
+- **Application Insights**: Automatic telemetry
+- **Structured logging**: ILogger throughout
+- **Key metrics**:
+  - Queue depth
+  - Processing time
+  - Success/failure rates
+  - Retry counts
 
 ## Security Architecture
 
-1. **Authentication**: Function-level authorization keys
-2. **Secrets Management**:
-   - Local: `local.settings.json` (git-ignored)
-   - Production: Azure App Settings or Key Vault
-3. **Queue Access**: Connection strings with SAS tokens or Managed Identity
+### Secrets Management
+- **Local**: `local.settings.json` (gitignored)
+- **Production**: Azure Key Vault
+- **Access**: Managed Identity (no credentials in code)
 
-## Extension Points
+### Authentication
+- **Queue access**: Connection string (via Key Vault)
+- **Database**: PostgreSQL connection string (via Key Vault)
+- **SMTP**: Username/password (via Key Vault)
+- **Twilio**: Account SID + Auth Token (via Key Vault)
 
-To add a new notification provider:
+### Data Protection
+- **In transit**: SSL/TLS for all connections
+- **At rest**: Azure Storage encryption, PostgreSQL encryption
+- **Secrets**: Never logged or exposed in responses
 
-1. Create model in `Core/Models/`
-2. Add method to `INotificationConfigService`
-3. Implement in `NotificationConfigService`
-4. Create new Function endpoint
-5. Add configuration section
-6. Write tests
+## Extensibility Points
 
-## Testing Strategy
+### Adding New Channels
+1. Add channel constant in `NotificationChannel.cs`
+2. Create sender interface in Core (`INewChannelSender`)
+3. Implement sender in Infrastructure
+4. Register in `Program.cs`
+5. Update `NotificationProcessorService` switch statement
+6. Create template directory `Templates/newchannel/`
 
-- **Unit Tests**: Test business logic in isolation using mocks
-- **Integration Tests**: Test Azure Functions with test configuration
-- **Mocking**: Moq for interface mocking
-- **Configuration**: In-memory configuration for tests
+### Adding New Templates
+1. Create template file in `Templates/{channel}/{TemplateName}.{ext}`
+2. Use `{{placeholder}}` syntax
+3. Deploy with application (automatically copied)
 
-## Scalability Considerations
+### Custom Template Rendering
+- Implement `ITemplateEngine` with custom logic
+- Register in DI container
+- Supports advanced scenarios (Razor, Liquid, etc.)
 
-1. **Stateless Design**: All functions are stateless
-2. **Queue Pattern**: Async processing via Azure Queue
-3. **Horizontal Scaling**: Functions can scale independently
-4. **Connection Pooling**: Azure SDK handles connection management
+## Design Patterns Used
 
-## Monitoring and Observability
+- **Dependency Injection**: Constructor injection throughout
+- **Repository Pattern**: `INotificationRepository` abstracts data access
+- **Strategy Pattern**: Different senders for different channels
+- **Template Method**: Base processing flow with channel-specific steps
+- **Factory Pattern**: Service creation via DI container
+- **Single Responsibility**: Each class has one reason to change
 
-- **Application Insights**: Built-in telemetry
-- **Structured Logging**: ILogger throughout
-- **Correlation IDs**: RequestId tracking in responses
+## Technology Stack
+
+- **.NET 8.0**: LTS runtime
+- **Azure Functions v4**: Isolated process model
+- **Azure Queue Storage**: Message queuing
+- **PostgreSQL**: Relational database
+- **SMTP**: Email delivery
+- **Twilio**: SMS delivery
+- **NUnit**: Testing framework
+- **Moq**: Mocking framework
 
 ## Future Enhancements
 
-1. **Azure Key Vault Integration**: Enhanced secret management
-2. **Managed Identity**: Remove connection strings
-3. **Cache Layer**: Redis for configuration caching
-4. **Rate Limiting**: Protect endpoints from abuse
-5. **Health Checks**: Endpoint for monitoring
+1. **In-App Notifications**: SignalR integration
+2. **Push Notifications**: Firebase/APNS support
+3. **Template Versioning**: A/B testing support
+4. **Rich Media**: Attachment support for emails
+5. **Analytics**: Open/click tracking
+6. **Localization**: Multi-language templates
+7. **Scheduled Sending**: Delayed notifications
+8. **Priority Queues**: High/low priority messages

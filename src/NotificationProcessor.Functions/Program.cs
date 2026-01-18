@@ -15,10 +15,6 @@ var host = new HostBuilder()
         services.AddApplicationInsightsTelemetryWorkerService();
         services.ConfigureFunctionsApplicationInsights();
 
-        // Existing services
-        services.AddSingleton<INotificationConfigService, NotificationConfigService>();
-        services.AddSingleton<IQueueService, QueueService>();
-
         // Configuration models
         services.AddSingleton(sp =>
         {
