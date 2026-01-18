@@ -58,7 +58,7 @@ public class NotificationProcessorServiceTests
         var renderedContent = "<html>Hello John, OTP: 123456</html>";
 
         _mockTemplateEngine
-            .Setup(x => x.LoadTemplateAsync("forget-password", "email"))
+            .Setup(x => x.LoadTemplateAsync("UserWelcome", "email"))
             .ReturnsAsync(templateContent);
 
         _mockTemplateEngine

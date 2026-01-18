@@ -140,11 +140,25 @@ public class TemplateEngineTests
     }
 
     [Test]
-    public void LoadTemplateAsync_WithNonExistentChannel_ThrowsDirectoryNotFoundException()
+    public void LoadTemplateAsync_WithNonExistentChannel_ThrowsArgumentException()
     {
+        // "invalid-channel" is not a supported channel, so it should throw ArgumentException
+        // (input validation happens before directory existence check)
+
+        // Act & Assert
+        Assert.ThrowsAsync<ArgumentException>(async () =>
+            await _templateEngine.LoadTemplateAsync("Test", "invalid-channel"));
+    }
+
+    [Test]
+    public void LoadTemplateAsync_WithSupportedChannelButMissingDirectory_ThrowsDirectoryNotFoundException()
+    {
+        // "inapp" is a supported channel, but if its directory doesn't exist,
+        // it should throw DirectoryNotFoundException (after passing validation)
+
         // Act & Assert
         Assert.ThrowsAsync<DirectoryNotFoundException>(async () =>
-            await _templateEngine.LoadTemplateAsync("Test", "invalid-channel"));
+            await _templateEngine.LoadTemplateAsync("Test", "inapp"));
     }
 
     [Test]
