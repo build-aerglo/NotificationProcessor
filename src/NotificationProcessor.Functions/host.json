@@ -13,5 +13,10 @@
       "Microsoft": "Warning",
       "Microsoft.Hosting.Lifetime": "Information"
     }
+  },
+  "extensions": {
+    "queues": {
+      "messageEncoding": "base64"
+    }
   }
 }
