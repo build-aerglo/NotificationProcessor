@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Moq;
-using NUnit.Framework;
 using NotificationProcessor.Core.Interfaces;
 using NotificationProcessor.Core.Models;
 using NotificationProcessor.Infrastructure.Services;
