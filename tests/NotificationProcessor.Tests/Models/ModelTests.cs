@@ -7,19 +7,14 @@ namespace NotificationProcessor.Tests.Models;
 public class ModelTests
 {
     [Test]
-    public void SmtpConfiguration_DefaultValues_AreCorrect()
+    public void AzureEmailConfiguration_DefaultValues_AreCorrect()
     {
         // Arrange & Act
-        var config = new SmtpConfiguration();
+        var config = new AzureEmailConfiguration();
 
         // Assert
-        Assert.That(config.Host, Is.EqualTo(string.Empty));
-        Assert.That(config.Port, Is.EqualTo(0));
-        Assert.That(config.Username, Is.EqualTo(string.Empty));
-        Assert.That(config.Password, Is.EqualTo(string.Empty));
-        Assert.That(config.FromEmail, Is.EqualTo(string.Empty));
-        Assert.That(config.FromName, Is.EqualTo(string.Empty));
-        Assert.That(config.EnableSsl, Is.True);
+        Assert.That(config.ConnectionString, Is.EqualTo(string.Empty));
+        Assert.That(config.SenderAddress, Is.EqualTo(string.Empty));
     }
 
     [Test]
@@ -61,28 +56,18 @@ public class ModelTests
     }
 
     [Test]
-    public void SmtpConfiguration_CanSetProperties()
+    public void AzureEmailConfiguration_CanSetProperties()
     {
         // Arrange & Act
-        var config = new SmtpConfiguration
+        var config = new AzureEmailConfiguration
         {
-            Host = "smtp.gmail.com",
-            Port = 587,
-            Username = "user@gmail.com",
-            Password = "password123",
-            FromEmail = "noreply@example.com",
-            FromName = "Test System",
-            EnableSsl = true
+            ConnectionString = "endpoint=https://test.communication.azure.com/;accesskey=testkey123==",
+            SenderAddress = "DoNotReply@test.com"
         };
 
         // Assert
-        Assert.That(config.Host, Is.EqualTo("smtp.gmail.com"));
-        Assert.That(config.Port, Is.EqualTo(587));
-        Assert.That(config.Username, Is.EqualTo("user@gmail.com"));
-        Assert.That(config.Password, Is.EqualTo("password123"));
-        Assert.That(config.FromEmail, Is.EqualTo("noreply@example.com"));
-        Assert.That(config.FromName, Is.EqualTo("Test System"));
-        Assert.That(config.EnableSsl, Is.True);
+        Assert.That(config.ConnectionString, Is.EqualTo("endpoint=https://test.communication.azure.com/;accesskey=testkey123=="));
+        Assert.That(config.SenderAddress, Is.EqualTo("DoNotReply@test.com"));
     }
 
     [Test]
