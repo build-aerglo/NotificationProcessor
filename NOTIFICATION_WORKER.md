@@ -7,7 +7,7 @@ This document describes the notification queue worker implementation for process
 The notification queue worker is a background Azure Function that:
 1. Fetches notification messages from Azure Queue Storage
 2. Loads and renders templates with dynamic data
-3. Sends notifications via Email (SMTP) or SMS (Twilio)
+3. Sends notifications via Email (Azure Communication Services) or SMS (Twilio)
 4. Updates the database with delivery status
 5. Implements retry logic with exponential backoff
 
@@ -18,7 +18,7 @@ The notification queue worker is a background Azure Function that:
 1. **NotificationQueueWorkerFunction** - Azure Function with Queue Trigger
 2. **NotificationProcessorService** - Orchestrates the notification processing
 3. **TemplateEngine** - Loads and renders templates with `{{placeholder}}` syntax
-4. **EmailSender** - Sends emails via SMTP
+4. **EmailSender** - Sends emails via Azure Communication Services
 5. **SmsSender** - Sends SMS via Twilio
 6. **NotificationRepository** - Updates notification status in PostgreSQL
 

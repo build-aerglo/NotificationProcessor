@@ -18,13 +18,8 @@ For local development, all configuration goes in `local.settings.json`. This fil
     "AzureQueueStorage__ConnectionString": "UseDevelopmentStorage=true",
     "AzureQueueStorage__QueueName": "notifications",
 
-    "Smtp__Host": "smtp.example.com",
-    "Smtp__Port": "587",
-    "Smtp__Username": "your-smtp-username",
-    "Smtp__Password": "your-smtp-password",
-    "Smtp__FromEmail": "noreply@example.com",
-    "Smtp__FromName": "Your Company",
-    "Smtp__EnableSsl": "true",
+    "AzureEmail__ConnectionString": "endpoint=https://your-communication-service.communication.azure.com/;accesskey=your-access-key",
+    "AzureEmail__SenderAddress": "DoNotReply@yourdomain.com",
 
     "Twilio__AccountSid": "your-twilio-account-sid",
     "Twilio__AuthToken": "your-twilio-auth-token",
@@ -63,13 +58,8 @@ Add each setting as an Application Setting:
 |------|-------|
 | `AzureQueueStorage__ConnectionString` | `DefaultEndpointsProtocol=https;...` |
 | `AzureQueueStorage__QueueName` | `notifications` |
-| `Smtp__Host` | `smtp.sendgrid.net` |
-| `Smtp__Port` | `587` |
-| `Smtp__Username` | `apikey` |
-| `Smtp__Password` | `SG.xxxxxxxxxxxxx` |
-| `Smtp__FromEmail` | `noreply@yourdomain.com` |
-| `Smtp__FromName` | `Your Company` |
-| `Smtp__EnableSsl` | `true` |
+| `AzureEmail__ConnectionString` | `endpoint=https://your-service.communication.azure.com/;accesskey=...` |
+| `AzureEmail__SenderAddress` | `DoNotReply@yourdomain.com` |
 | `Twilio__AccountSid` | `ACxxxxxxxxxxxxxxxx` |
 | `Twilio__AuthToken` | `your-auth-token` |
 | `Twilio__FromPhoneNumber` | `+1234567890` |
@@ -86,7 +76,7 @@ Create secrets in Azure Key Vault:
 az keyvault create --name your-keyvault --resource-group your-rg --location eastus
 
 # Create secrets
-az keyvault secret set --vault-name your-keyvault --name SmtpPassword --value "your-smtp-password"
+az keyvault secret set --vault-name your-keyvault --name AzureEmailConnectionString --value "endpoint=https://...;accesskey=..."
 az keyvault secret set --vault-name your-keyvault --name TwilioAuthToken --value "your-twilio-auth-token"
 az keyvault secret set --vault-name your-keyvault --name DatabaseConnectionString --value "Host=...;Password=..."
 az keyvault secret set --vault-name your-keyvault --name QueueConnectionString --value "DefaultEndpointsProtocol=https;..."
@@ -116,7 +106,7 @@ Use Key Vault reference syntax in Application Settings:
 
 | Name | Value |
 |------|-------|
-| `Smtp__Password` | `@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/SmtpPassword/)` |
+| `AzureEmail__ConnectionString` | `@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/AzureEmailConnectionString/)` |
 | `Twilio__AuthToken` | `@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/TwilioAuthToken/)` |
 | `Database__ConnectionString` | `@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/DatabaseConnectionString/)` |
 | `AzureQueueStorage__ConnectionString` | `@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/QueueConnectionString/)` |
@@ -125,12 +115,7 @@ Non-secret settings can be configured directly:
 
 | Name | Value |
 |------|-------|
-| `Smtp__Host` | `smtp.sendgrid.net` |
-| `Smtp__Port` | `587` |
-| `Smtp__Username` | `apikey` |
-| `Smtp__FromEmail` | `noreply@yourdomain.com` |
-| `Smtp__FromName` | `Your Company` |
-| `Smtp__EnableSsl` | `true` |
+| `AzureEmail__SenderAddress` | `DoNotReply@yourdomain.com` |
 | `Twilio__AccountSid` | `ACxxxxxxxxxxxxxxxx` |
 | `Twilio__FromPhoneNumber` | `+1234567890` |
 | `AzureQueueStorage__QueueName` | `notifications` |
@@ -140,19 +125,14 @@ Non-secret settings can be configured directly:
 ```bash
 # Set non-secret settings
 az functionapp config appsettings set --name your-function-app --resource-group your-rg --settings \
-  "Smtp__Host=smtp.sendgrid.net" \
-  "Smtp__Port=587" \
-  "Smtp__Username=apikey" \
-  "Smtp__FromEmail=noreply@yourdomain.com" \
-  "Smtp__FromName=Your Company" \
-  "Smtp__EnableSsl=true" \
+  "AzureEmail__SenderAddress=DoNotReply@yourdomain.com" \
   "Twilio__AccountSid=ACxxxxxxxxxxxxxxxx" \
   "Twilio__FromPhoneNumber=+1234567890" \
   "AzureQueueStorage__QueueName=notifications"
 
 # Set Key Vault references
 az functionapp config appsettings set --name your-function-app --resource-group your-rg --settings \
-  "Smtp__Password=@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/SmtpPassword/)" \
+  "AzureEmail__ConnectionString=@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/AzureEmailConnectionString/)" \
   "Twilio__AuthToken=@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/TwilioAuthToken/)" \
   "Database__ConnectionString=@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/DatabaseConnectionString/)" \
   "AzureQueueStorage__ConnectionString=@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/QueueConnectionString/)"
@@ -160,17 +140,12 @@ az functionapp config appsettings set --name your-function-app --resource-group 
 
 ## Configuration Settings Reference
 
-### SMTP Configuration
+### Azure Communication Services Email Configuration
 
 | Setting | Description | Example |
 |---------|-------------|---------|
-| `Smtp__Host` | SMTP server hostname | `smtp.sendgrid.net`, `smtp.gmail.com` |
-| `Smtp__Port` | SMTP server port | `587` (TLS), `465` (SSL), `25` (plain) |
-| `Smtp__Username` | SMTP username | `apikey` (SendGrid), email (Gmail) |
-| `Smtp__Password` | SMTP password/API key | **Store in Key Vault** |
-| `Smtp__FromEmail` | Default sender email | `noreply@yourdomain.com` |
-| `Smtp__FromName` | Default sender name | `Your Company` |
-| `Smtp__EnableSsl` | Enable SSL/TLS | `true` (recommended) |
+| `AzureEmail__ConnectionString` | Azure Communication Services connection string | `endpoint=https://....communication.azure.com/;accesskey=...` **Store in Key Vault** |
+| `AzureEmail__SenderAddress` | Verified sender email address | `DoNotReply@yourdomain.com` |
 
 ### Twilio Configuration
 
@@ -193,55 +168,38 @@ az functionapp config appsettings set --name your-function-app --resource-group 
 |---------|-------------|---------|
 | `Database__ConnectionString` | PostgreSQL connection string | **Store in Key Vault** |
 
-## Email Provider Examples
+## Setting Up Azure Communication Services
 
-### SendGrid
+To use Azure Communication Services for email:
 
-```json
-{
-  "Smtp__Host": "smtp.sendgrid.net",
-  "Smtp__Port": "587",
-  "Smtp__Username": "apikey",
-  "Smtp__Password": "SG.xxxxxxxxxxxxx",
-  "Smtp__EnableSsl": "true"
-}
-```
+1. **Create Azure Communication Services resource:**
+   ```bash
+   az communication create --name your-communication-service \
+     --resource-group your-rg \
+     --location global \
+     --data-location UnitedStates
+   ```
 
-### Gmail (App Password)
+2. **Get the connection string:**
+   ```bash
+   az communication list-key --name your-communication-service \
+     --resource-group your-rg
+   ```
 
-```json
-{
-  "Smtp__Host": "smtp.gmail.com",
-  "Smtp__Port": "587",
-  "Smtp__Username": "your-email@gmail.com",
-  "Smtp__Password": "your-app-password",
-  "Smtp__EnableSsl": "true"
-}
-```
+3. **Create and verify an email domain:**
+   - Go to Azure Portal → Communication Services → Email → Domains
+   - Add a custom domain or use Azure-managed domain
+   - Verify domain ownership (add DNS records)
+   - Configure sender addresses (e.g., DoNotReply@yourdomain.com)
 
-### Microsoft 365
+4. **Connect email service to Communication Services:**
+   ```bash
+   az communication email domain add --name your-communication-service \
+     --resource-group your-rg \
+     --email-domain-resource-id /subscriptions/.../domains/your-domain
+   ```
 
-```json
-{
-  "Smtp__Host": "smtp.office365.com",
-  "Smtp__Port": "587",
-  "Smtp__Username": "your-email@yourdomain.com",
-  "Smtp__Password": "your-password",
-  "Smtp__EnableSsl": "true"
-}
-```
-
-### AWS SES
-
-```json
-{
-  "Smtp__Host": "email-smtp.us-east-1.amazonaws.com",
-  "Smtp__Port": "587",
-  "Smtp__Username": "your-smtp-username",
-  "Smtp__Password": "your-smtp-password",
-  "Smtp__EnableSsl": "true"
-}
-```
+For detailed setup, see: [Azure Communication Services Email Documentation](https://learn.microsoft.com/en-us/azure/communication-services/quickstarts/email/send-email)
 
 ## Security Best Practices
 
@@ -296,15 +254,17 @@ After deploying and configuring Application Settings:
 - Check Key Vault secret is accessible
 - Test connection string format separately
 
-### SMTP Authentication Failed
+### Azure Communication Services Email Errors
 
-**Symptom:** SMTP errors in logs
+**Symptom:** Email sending fails with Azure Communication Services errors
 
 **Solutions:**
-- Verify username/password are correct
-- Check if email provider requires app-specific passwords
-- Ensure port and SSL settings match provider requirements
-- Check if IP needs to be whitelisted
+- Verify connection string is correct and accessible
+- Ensure sender address is verified in Azure Communication Services
+- Check that email domain is properly configured and verified
+- Verify the Communication Services resource has email enabled
+- Check Azure Communication Services quotas and limits
+- Ensure recipient email addresses are valid
 
 ### Templates Not Found
 
