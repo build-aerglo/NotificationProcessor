@@ -32,8 +32,8 @@ The NotificationProcessor is an Azure Functions application that processes notif
       │              │              │              │
       ↓              ↓              ↓              ↓
 ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐
-│Templates │  │   SMTP   │  │  Twilio  │  │  PostgreSQL  │
-│  Files   │  │  Server  │  │   API    │  │   Database   │
+│Templates │  │  Azure   │  │  Twilio  │  │  PostgreSQL  │
+│  Files   │  │Comm Svc  │  │   API    │  │   Database   │
 └──────────┘  └──────────┘  └──────────┘  └──────────────┘
 ```
 
@@ -51,7 +51,7 @@ The NotificationProcessor is an Azure Functions application that processes notif
 - `NotificationMessage`: Queue message structure
 - `NotificationChannel`: Channel constants (email, sms, inapp)
 - `NotificationStatus`: Status constants (pending, sent, delivered, failed)
-- `SmtpConfiguration`: Email service credentials
+- `AzureEmailConfiguration`: Azure Communication Services email credentials
 - `TwilioConfiguration`: SMS service credentials
 
 **Interfaces**:
@@ -93,10 +93,10 @@ The NotificationProcessor is an Azure Functions application that processes notif
 - Organizes templates by channel (email/, sms/)
 
 **EmailSender**:
-- Sends emails via SMTP
+- Sends emails via Azure Communication Services
 - HTML support
-- Configurable sender name/email
-- SSL/TLS support
+- Configurable sender address
+- Built-in Azure reliability and delivery tracking
 
 **SmsSender**:
 - Sends SMS via Twilio API
@@ -145,7 +145,7 @@ Templates/
 **Program.cs**:
 - Dependency injection configuration
 - Service registration
-- Configuration binding (SMTP, Twilio, Database)
+- Configuration binding (AzureEmail, Twilio, Database)
 - Template path setup
 
 **Design Principles**:
@@ -207,7 +207,7 @@ Templates/
    ↓
 5. Render template with payload data
    ↓
-6. Send via appropriate channel (SMTP/Twilio)
+6. Send via appropriate channel (Azure Communication Services/Twilio)
    ↓
 7. Update database: status = 'delivered', delivered_at = NOW()
    ↓
@@ -225,7 +225,7 @@ Templates/
    ↓
 4. Attempt processing...
    ↓
-5. Send fails (SMTP error, network issue, etc.)
+5. Send fails (Azure Communication Services error, network issue, etc.)
    ↓
 6. Increment retry_count in database
    ↓
@@ -284,7 +284,7 @@ Injected into services
 ### Horizontal Scaling
 - **Stateless design**: No in-memory state
 - **Singleton services**: Shared across function invocations
-- **Connection pooling**: SMTP and database connections reused
+- **Connection pooling**: Azure Communication Services client and database connections reused
 - **Parallel processing**: Multiple queue messages processed concurrently
 
 ### Retry Strategy
@@ -312,7 +312,7 @@ Injected into services
 ### Authentication
 - **Queue access**: Connection string (via Key Vault)
 - **Database**: PostgreSQL connection string (via Key Vault)
-- **SMTP**: Username/password (via Key Vault)
+- **Azure Communication Services**: Connection string with access key (via Key Vault)
 - **Twilio**: Account SID + Auth Token (via Key Vault)
 
 ### Data Protection
@@ -355,7 +355,7 @@ Injected into services
 - **Azure Functions v4**: Isolated process model
 - **Azure Queue Storage**: Message queuing
 - **PostgreSQL**: Relational database
-- **SMTP**: Email delivery
+- **Azure Communication Services**: Email delivery
 - **Twilio**: SMS delivery
 - **NUnit**: Testing framework
 - **Moq**: Mocking framework

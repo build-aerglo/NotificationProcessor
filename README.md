@@ -7,7 +7,7 @@ Azure Functions application for processing email and SMS notifications from Azur
 This service is a background worker that:
 1. Monitors Azure Queue Storage for notification messages
 2. Loads and renders email/SMS templates with dynamic data
-3. Sends notifications via SMTP (email) or Twilio (SMS)
+3. Sends notifications via Azure Communication Services (email) or Twilio (SMS)
 4. Updates PostgreSQL database with delivery status
 5. Implements retry logic with exponential backoff
 
@@ -20,7 +20,7 @@ NotificationProcessor/
 ├── src/
 │   ├── NotificationProcessor.Core/              # Domain models & interfaces
 │   │   ├── Models/
-│   │   │   ├── SmtpConfiguration.cs
+│   │   │   ├── AzureEmailConfiguration.cs
 │   │   │   ├── TwilioConfiguration.cs
 │   │   │   ├── NotificationMessage.cs
 │   │   │   ├── NotificationChannel.cs
@@ -36,7 +36,7 @@ NotificationProcessor/
 │   │   └── Services/
 │   │       ├── NotificationProcessorService.cs   # Main processing orchestrator
 │   │       ├── TemplateEngine.cs                 # Template loading & rendering
-│   │       ├── EmailSender.cs                    # SMTP email sending
+│   │       ├── EmailSender.cs                    # Azure Communication Services email sending
 │   │       ├── SmsSender.cs                      # Twilio SMS sending
 │   │       └── NotificationRepository.cs         # PostgreSQL data access
 │   │
@@ -67,7 +67,7 @@ NotificationProcessor/
 
 - **Queue-Triggered Processing**: Automatically processes notifications from Azure Queue Storage
 - **Template Engine**: Dynamic template rendering with `{{placeholder}}` syntax
-- **Multi-Channel Support**: Email (SMTP) and SMS (Twilio)
+- **Multi-Channel Support**: Email (Azure Communication Services) and SMS (Twilio)
 - **Database Integration**: PostgreSQL for delivery status tracking
 - **Retry Logic**: Exponential backoff (max 5 retries)
 - **Comprehensive Tests**: NUnit test coverage for all components
@@ -189,13 +189,8 @@ Create `local.settings.json`:
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
 
-    "Smtp__Host": "smtp.example.com",
-    "Smtp__Port": "587",
-    "Smtp__Username": "your-username",
-    "Smtp__Password": "your-password",
-    "Smtp__FromEmail": "noreply@example.com",
-    "Smtp__FromName": "Your Company",
-    "Smtp__EnableSsl": "true",
+    "AzureEmail__ConnectionString": "endpoint=https://your-service.communication.azure.com/;accesskey=your-key",
+    "AzureEmail__SenderAddress": "DoNotReply@yourdomain.com",
 
     "Twilio__AccountSid": "ACxxxxxxxx",
     "Twilio__AuthToken": "your-token",
@@ -214,7 +209,7 @@ Create `local.settings.json`:
 Use Azure Application Settings with Key Vault references:
 
 ```
-Smtp__Password=@Microsoft.KeyVault(SecretUri=https://your-kv.vault.azure.net/secrets/SmtpPassword/)
+AzureEmail__ConnectionString=@Microsoft.KeyVault(SecretUri=https://your-kv.vault.azure.net/secrets/AzureEmailConnectionString/)
 Twilio__AuthToken=@Microsoft.KeyVault(SecretUri=https://your-kv.vault.azure.net/secrets/TwilioAuthToken/)
 Database__ConnectionString=@Microsoft.KeyVault(SecretUri=https://your-kv.vault.azure.net/secrets/DbConnectionString/)
 ```

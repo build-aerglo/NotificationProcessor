@@ -20,9 +20,9 @@ var host = new HostBuilder()
         services.AddSingleton(sp =>
         {
             var config = sp.GetRequiredService<IConfiguration>();
-            var smtpConfig = new SmtpConfiguration();
-            config.GetSection("Smtp").Bind(smtpConfig);
-            return smtpConfig;
+            var emailConfig = new AzureEmailConfiguration();
+            config.GetSection("AzureEmail").Bind(emailConfig);
+            return emailConfig;
         });
 
         services.AddSingleton(sp =>
